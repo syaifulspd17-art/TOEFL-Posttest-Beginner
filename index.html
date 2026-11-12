@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TOEFL ITP Post-Test</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* Layout: fixed top bar (section, question, timer) + work area + fixed bottom bar, like the ITP digital screen */
+:root {
+  --paper: #eef1f4;
+  --panel: #ffffff;
+  --ink: #18222d;
+  --muted: #5b6875;
+  --line: #d3dae1;
+  --bar: #14324b;
+  --bar-ink: #eaf1f7;
+  --accent: #0d5f8f;
+  --accent-soft: #dcebf5;
+  --flag: #b86e00;
+  --flag-soft: #fbefd9;
+  --danger: #b3261e;
+  --ok: #1f7a4a;
+  --ui: "IBM Plex Sans", "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+  --read: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 15px/1.5 var(--ui); -webkit-text-size-adjust: 100%;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible, .opt:focus-visible, .ul:focus-visible { outline: 3px solid #6aa9d6; outline-offset: 2px; }
+.pad { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+[hidden] { display: none !important; }
+
+/* ---------- top & bottom bars ---------- */
+.topbar {
+  position: fixed; inset: 0 0 auto; z-index: 20; background: var(--bar); color: var(--bar-ink);
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.topbar .in { display: flex; align-items: center; gap: 12px; min-height: 52px; }
+.brand { font-weight: 600; letter-spacing: .02em; white-space: nowrap; }
+.brand small { display: block; font-weight: 400; opacity: .75; font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+.qcount { margin-left: auto; font-size: 14px; opacity: .9; white-space: nowrap; }
+.timer {
+  font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 17px;
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.25); border-radius: 6px; padding: 3px 10px; white-space: nowrap;
+}
+.timer.low { background: var(--danger); border-color: var(--danger); color: #fff; }
+.bottombar {
+  position: fixed; inset: auto 0 0; z-index: 20; background: var(--panel); border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.bottombar .in { display: flex; align-items: center; gap: 8px; min-height: 60px; padding-block: 8px; }
+.spacer { flex: 1; }
+
+.btn {
+  border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 9px 16px; font-weight: 500;
+  min-height: 42px;
+}
+.btn:hover { border-color: #9fb0c0; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { background: #0a4f78; }
+.btn.flagged { background: var(--flag-soft); border-color: var(--flag); color: #6b4000; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ---------- pages ---------- */
+.screen { padding-top: calc(52px + env(safe-area-inset-top, 0px)); padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); min-height: 100%; }
+.screen.nobars { padding-top: 0; padding-bottom: 0; display: grid; place-items: center; align-content: center; padding-block: 32px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 28px; width: 100%; max-width: 620px; }
+.card h1 { font-size: 24px; margin: 0 0 4px; text-wrap: balance; }
+.card h2 { font-size: 19px; margin: 0 0 12px; text-wrap: balance; }
+.lede { color: var(--muted); margin: 0 0 20px; }
+.field { display: grid; gap: 6px; margin-bottom: 14px; }
+.field label { font-weight: 500; font-size: 14px; }
+.field input, .field select { font: inherit; background: #fff; color: var(--ink); padding: 10px 12px; border: 1px solid #b9c4cf; border-radius: 6px; width: 100%; }
+.msg { padding: 10px 12px; border-radius: 6px; margin: 0 0 14px; font-size: 14px; }
+.msg.err { background: #fbe9e7; color: #7f1d17; border: 1px solid #f0c2bd; }
+.msg.info { background: var(--accent-soft); color: #0b3f60; border: 1px solid #b8d6ea; }
+
+.sections { width: 100%; border-collapse: collapse; margin: 6px 0 18px; font-variant-numeric: tabular-nums; }
+.sections th, .sections td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); }
+.sections th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; }
+.sections td.num, .sections th.num { text-align: right; }
+.rules { margin: 0 0 20px; padding-left: 20px; }
+.rules li { margin-bottom: 6px; }
+
+.secmark { font: 600 13px var(--ui); letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+
+/* ---------- question area ---------- */
+.work { max-width: 1320px; margin: 0 auto; padding-block: 20px; }
+.qwrap { max-width: 760px; margin: 0 auto; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 22px 24px; }
+.part { font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.qhead { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+.qnum { font-weight: 700; font-size: 18px; }
+.qflag { color: var(--flag); font-size: 13px; font-weight: 600; }
+.stem { font: 18px/1.65 var(--read); margin: 0 0 18px; }
+.hint { font-size: 13px; color: var(--muted); margin: -6px 0 16px; }
+.blank { display: inline-block; width: 4.5em; border-bottom: 2px solid var(--ink); transform: translateY(-4px); }
+
+.opts { display: grid; gap: 10px; }
+.opt {
+  display: flex; gap: 14px; align-items: flex-start; text-align: left; width: 100%;
+  border: 1.5px solid var(--line); background: var(--panel); border-radius: 8px; padding: 12px 14px;
+  font: 17px/1.5 var(--read);
+}
+.opt:hover { border-color: #8fa6bb; }
+.opt .let {
+  flex: none; width: 30px; height: 30px; border-radius: 50%; border: 1.5px solid #8696a6;
+  display: grid; place-items: center; font: 600 14px var(--ui); color: var(--muted);
+}
+.opt[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.opt[aria-pressed="true"] .let { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+/* written expression */
+.we { font: 19px/2.9 var(--read); margin: 4px 0 22px; }
+.ul { display: inline-flex; flex-direction: column; align-items: center; vertical-align: top; line-height: 1.5; border-radius: 4px; padding: 0 2px; cursor: pointer; background: none; border: 0; font: inherit; }
+.ul .ult { text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
+.ul .ull { font: 600 12px/1.3 var(--ui); color: var(--muted); }
+.ul[aria-pressed="true"] { background: var(--accent-soft); }
+.ul[aria-pressed="true"] .ull { color: var(--accent); }
+.weopts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.weopts .opt { justify-content: center; padding: 10px; }
+
+/* reading */
+.rgrid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+.passage { position: sticky; top: calc(52px + 20px + env(safe-area-inset-top, 0px)); max-height: calc(100vh - 52px - 76px - 40px); overflow: auto; }
+.passage h3 { margin: 0 0 12px; font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.pl { display: grid; grid-template-columns: 2.6em max-content; gap: 6px; font: 15px/1.8 var(--read); white-space: nowrap; }
+.pl .ln { font: 12px/2.4 var(--ui); color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.pl.para .tx { text-indent: 1.6em; }
+.pl.hl .tx { background: #fff2b8; }
+
+/* listening */
+.audio { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; padding: 14px 18px; flex-wrap: wrap; }
+.wave { display: flex; gap: 3px; align-items: center; height: 22px; }
+.wave i { width: 4px; background: var(--accent); border-radius: 2px; height: 30%; }
+.playing .wave i { animation: bounce 1s ease-in-out infinite; }
+.wave i:nth-child(2){animation-delay:.15s}.wave i:nth-child(3){animation-delay:.3s}.wave i:nth-child(4){animation-delay:.45s}.wave i:nth-child(5){animation-delay:.6s}
+@keyframes bounce { 0%,100% { height: 25%; } 50% { height: 100%; } }
+.astatus { font-weight: 500; }
+.astatus small { display: block; color: var(--muted); font-weight: 400; }
+.abar { flex: 1 1 160px; height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; min-width: 120px; }
+.abar span { display: block; height: 100%; background: var(--accent); width: 0; }
+
+/* review overlay */
+.overlay { position: fixed; inset: 0; z-index: 40; background: rgba(15,30,45,.45); display: grid; place-items: center; padding: 16px; }
+.sheet { background: var(--panel); border-radius: 12px; width: 100%; max-width: 640px; max-height: 90vh; overflow: auto; padding: 22px; }
+.sheet h2 { margin: 0 0 4px; font-size: 19px; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--muted); margin: 6px 0 14px; }
+.legend span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; border: 1.5px solid #8696a6; }
+.legend .l-ans::before { background: var(--accent); border-color: var(--accent); }
+.legend .l-flag::before { background: var(--flag-soft); border-color: var(--flag); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(46px, 1fr)); gap: 6px; margin-bottom: 18px; }
+.cell { border: 1.5px solid #b9c4cf; background: var(--panel); border-radius: 6px; height: 42px; font-weight: 600; font-variant-numeric: tabular-nums; position: relative; }
+.cell.ans { background: var(--accent); border-color: var(--accent); color: #fff; }
+.cell.flag { box-shadow: inset 0 0 0 3px var(--flag); }
+.cell.cur { outline: 2px solid var(--ink); outline-offset: 1px; }
+.sheet .row { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+
+.credit { font-size: 12.5px; color: var(--muted); text-align: center; margin: 14px 0 0; letter-spacing: .01em; }
+.credit b { font-weight: 600; color: var(--ink); }
+.big { font: 700 64px/1 var(--ui); font-variant-numeric: tabular-nums; color: var(--accent); margin: 8px 0 4px; }
+
+@media (max-width: 760px) {
+  .rgrid { grid-template-columns: minmax(0, 1fr); }
+  .passage { position: static; max-height: 46vh; }
+  .brand small { display: none; }
+  .card, .panel { padding: 18px; }
+  .weopts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .bottombar .btn { padding: 8px 10px; }
+  .long { display: none; }
+  .pl { grid-template-columns: 2.6em minmax(0, 1fr); white-space: normal; font-size: 15.5px; }
+}
+@media (prefers-reduced-motion: reduce) { .playing .wave i { animation: none; height: 70%; } }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<audio id="aud" preload="auto"></audio>
+
+<script src="config.js"></script>
+<script src="questions-post.js"></script>
+<script src="questions-beginner.js"></script>
+<script>
+(function () {
+  'use strict';
+  var CFG = window.TOEFL_CONFIG, T = null, TEST = null;
+  function testOf(school) { var t = CFG.schools[school]; return t ? CFG.tests[t] : null; }
+  function useTest(school) {
+    var key = CFG.schools[school]; TEST = CFG.tests[key]; T = window.TOEFL_TESTS[key];
+    if (aud.getAttribute('src') !== TEST.audio) aud.src = TEST.audio;
+  }
+  var SEC = {
+    L: { name: 'Listening Comprehension', short: 'Section 1', total: 50 },
+    S: { name: 'Structure and Written Expression', short: 'Section 2', total: 40 },
+    R: { name: 'Reading Comprehension', short: 'Section 3', total: 50 }
+  };
+  var ORDER = ['L', 'S', 'R'];
+  var KEY = 'toefl-itp-pinrang:';
+  var app = document.getElementById('app');
+  var aud = document.getElementById('aud');
+
+  var st = null;            // test state for the logged-in student
+  var ui = { review: false, confirm: false, err: '', busy: false, audioBlocked: false };
+
+  // ---------- storage ----------
+  function skey(school, id) { return KEY + String(school) + '|' + String(id).toLowerCase(); }
+  function save() { try { localStorage.setItem(skey(st.school, st.id), JSON.stringify(st)); localStorage.setItem(KEY + 'last', JSON.stringify([st.school, st.id])); } catch (e) {} }
+  function load(school, id) { try { var s = localStorage.getItem(skey(school, id)); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+  function forgetLast() { try { localStorage.removeItem(KEY + 'last'); } catch (e) {} }
+  function lastId() { try { var v = JSON.parse(localStorage.getItem(KEY + 'last')); return Array.isArray(v) ? v : null; } catch (e) { return null; } }
+
+  function fresh(school, id, name, cls) {
+    return { school: school, id: id, name: name, cls: cls, stage: 'overview',
+      cur: { L: 0, S: 0, R: 0 }, ans: { L: [], S: [], R: [] }, mark: { L: [], S: [], R: [] },
+      start: { L: null, S: null, R: null }, done: { L: false, S: false, R: false }, result: null };
+  }
+
+  // ---------- server ----------
+  function post(body) {
+    return fetch(testOf(body.school).scriptUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json(); });
+  }
+
+  // ---------- helpers ----------
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function fmt(ms) { ms = Math.max(0, ms); var s = Math.ceil(ms / 1000), m = Math.floor(s / 60); s = s % 60; return (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s; }
+  function creditHtml() { var c = CFG.credit || 'Developed by Syaiful, S.Pd., M.Ed.'; return '<p class="credit">' + esc(c).replace(/^(Developed by )(.+)$/, '$1<b>$2</b>') + '</p>'; }
+  function limit(sec) { return CFG.minutes[sec] * 60000; }
+  function remaining(sec) { return st.start[sec] ? limit(sec) - (Date.now() - st.start[sec]) : limit(sec); }
+  function list(sec) { return T[sec]; }
+  function answered(sec) { return st.ans[sec].filter(Boolean).length; }
+  function partOf(n) { return n <= 30 ? 'Part A · Short conversations' : n <= 38 ? 'Part B · Longer conversations' : 'Part C · Talks'; }
+
+  // ---------- rendering ----------
+  function render() {
+    var s = st ? st.stage : 'login';
+    if (s === 'login') return renderLogin();
+    if (s === 'overview') return renderOverview();
+    if (s.indexOf('intro-') === 0) return renderIntro(s.slice(6));
+    if (s === 'L' || s === 'S' || s === 'R') return renderSection(s);
+    if (s === 'submitting') return renderSubmitting();
+    if (s === 'result') return renderResult();
+  }
+
+  function renderLogin(prefill) {
+    prefill = prefill || {};
+    app.innerHTML =
+      '<div class="screen nobars pad"><form class="card" id="login" novalidate>' +
+      '<div class="secmark">' + esc(CFG.title) + '</div>' +
+      '<h1>Sign in to start the test</h1>' +
+      '<p class="lede">Use your own name and student ID. Each student ID can take the test once.</p>' +
+      (ui.err ? '<p class="msg err" role="alert">' + esc(ui.err) + '</p>' : '') +
+      '<div class="field"><label for="f-school">School</label><select id="f-school" required><option value="">Choose your school</option>' +
+      Object.keys(CFG.schools).map(function (s) { return '<option' + (prefill.school === s ? ' selected' : '') + '>' + esc(s) + '</option>'; }).join('') + '</select></div>' +
+      '<div class="field"><label for="f-name">Full name</label><input id="f-name" autocomplete="name" required value="' + esc(prefill.name || '') + '"></div>' +
+      '<div class="field"><label for="f-id">Student ID</label><input id="f-id" autocomplete="off" required value="' + esc(prefill.id || '') + '"></div>' +
+      '<div class="field"><label for="f-class">Class</label><input id="f-class" autocomplete="off" value="' + esc(prefill.cls || '') + '"></div>' +
+      '<button class="btn primary" style="width:100%" ' + (ui.busy ? 'disabled' : '') + '>' + (ui.busy ? 'Checking…' : 'Continue') + '</button>' +
+      '</form>' + creditHtml() + '</div>';
+    document.getElementById('login').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var name = document.getElementById('f-name').value.trim();
+      var id = document.getElementById('f-id').value.trim();
+      var cls = document.getElementById('f-class').value.trim();
+      var school = document.getElementById('f-school').value;
+      var pf = { school: school, name: name, id: id, cls: cls };
+      if (!school) { ui.err = 'Please choose your school.'; return renderLogin(pf); }
+      if (!name || !id) { ui.err = 'Please enter your full name and student ID.'; return renderLogin(pf); }
+      ui.busy = true; ui.err = ''; renderLogin(pf);
+      useTest(school);
+      post({ action: 'start', school: school, studentId: id, name: name, 'class': cls }).then(function (res) {
+        ui.busy = false;
+        var local = load(school, id);
+        if (!res.ok) {
+          if (res.error === 'already_submitted' && local && local.result) { st = local; st.stage = 'result'; save(); return render(); }
+          ui.err = res.message || 'Sign in failed. Please try again.'; return renderLogin(pf);
+        }
+        st = (local && !local.result) ? local : fresh(school, id, name, cls);
+        st.name = name; st.cls = cls; save(); render();
+      }).catch(function () {
+        ui.busy = false; ui.err = 'Cannot reach the test server. Check your internet connection and try again.';
+        renderLogin(pf);
+      });
+    });
+  }
+
+  function renderOverview() {
+    app.innerHTML =
+      '<div class="screen nobars pad"><div class="card">' +
+      '<div class="secmark">' + esc(CFG.title) + '</div>' +
+      '<h1>Welcome, ' + esc(st.name) + '</h1>' +
+      '<p class="lede">' + esc(st.school || '') + ' · Student ID ' + esc(st.id) + (st.cls ? ' · Class ' + esc(st.cls) : '') + '</p>' +
+      '<table class="sections"><thead><tr><th>Section</th><th class="num">Questions</th><th class="num">Time</th></tr></thead><tbody>' +
+      ORDER.map(function (k) { return '<tr><td>' + SEC[k].short + ' · ' + SEC[k].name + '</td><td class="num">' + SEC[k].total + '</td><td class="num">' + CFG.minutes[k] + ' min</td></tr>'; }).join('') +
+      '</tbody></table>' +
+      '<ul class="rules">' +
+      '<li>Each section has its own timer. When time runs out, the section closes automatically.</li>' +
+      '<li>Within a section you can move between questions and change your answers until the time ends.</li>' +
+      '<li>Once a section is finished, you cannot go back to it.</li>' +
+      '<li>The listening recording plays only once. Use headphones and check your volume.</li>' +
+      '<li>You can take this test only once. Your score is shown at the end.</li>' +
+      '</ul>' +
+      '<button class="btn primary" id="go" style="width:100%">Go to Section 1</button>' +
+      '<p style="margin:14px 0 0;font-size:13px;color:var(--muted)">Not you? <button class="linkbtn" id="out" style="border:0;background:none;color:var(--accent);padding:0;text-decoration:underline">Sign in with another ID</button></p>' +
+      '</div>' + creditHtml() + '</div>';
+    document.getElementById('go').onclick = function () { st.stage = 'intro-L'; save(); render(); };
+    document.getElementById('out').onclick = function () { forgetLast(); st = null; render(); };
+  }
+
+  var DIRECTIONS = {
+    L: '<p>In this section you will hear conversations and talks in English. The recording plays <b>once only</b> and cannot be paused or replayed.</p>' +
+       '<p><b>Part A</b> (questions 1–30): short conversations. <b>Part B</b> (31–38): longer conversations. <b>Part C</b> (39–50): talks.</p>' +
+       '<p>After each question on the recording, choose the best answer on the screen. You can change your answers until the section time ends.</p>',
+    S: '<p><b>Structure</b> (questions 1–15): choose the word or phrase that best completes the sentence.</p>' +
+       '<p><b>Written Expression</b> (questions 16–40): each sentence has four underlined parts marked A, B, C and D. Choose the one part that must be changed for the sentence to be correct.</p>',
+    R: '<p>You will read five passages, each followed by questions. Choose the best answer, (A), (B), (C) or (D), based on what is stated or implied in the passage.</p>' +
+       '<p>The passage stays on screen while you answer. Line numbers are shown in the margin.</p>'
+  };
+
+  function renderIntro(sec) {
+    app.innerHTML =
+      '<div class="screen nobars pad"><div class="card">' +
+      '<div class="secmark">' + SEC[sec].short + '</div>' +
+      '<h1>' + SEC[sec].name + '</h1>' +
+      '<p class="lede">' + SEC[sec].total + ' questions · ' + CFG.minutes[sec] + ' minutes</p>' +
+      DIRECTIONS[sec] +
+      (sec === 'L' ? '<p class="msg info">The recording starts as soon as you press the button below.</p>' : '') +
+      '<button class="btn primary" id="go" style="width:100%;margin-top:8px">Start ' + SEC[sec].short + '</button>' +
+      '</div>' + creditHtml() + '</div>';
+    document.getElementById('go').onclick = function () {
+      st.stage = sec; st.start[sec] = Date.now(); st.cur[sec] = 0; save();
+      if (sec === 'L') startAudio();
+      render();
+    };
+  }
+
+  // ---------- section screen ----------
+  function renderSection(sec) {
+    var qs = list(sec), i = st.cur[sec], q = qs[i];
+    var marked = !!st.mark[sec][i];
+    var html = '';
+    html += '<header class="topbar"><div class="in pad">' +
+      '<div class="brand">' + SEC[sec].short + '<small>' + SEC[sec].name + '</small></div>' +
+      '<div class="qcount">Question ' + (i + 1) + ' of ' + qs.length + '</div>' +
+      '<div class="timer" id="timer" aria-label="Time remaining">' + fmt(remaining(sec)) + '</div>' +
+      '</div></header>';
+
+    html += '<div class="screen pad"><div class="work">';
+    if (sec === 'L') html += '<div class="qwrap">' + audioPanel() + questionPanel(sec, q, i, marked) + '</div>';
+    else if (sec === 'R') html += '<div class="rgrid">' + passagePanel(q) + questionPanel(sec, q, i, marked) + '</div>';
+    else html += '<div class="qwrap">' + questionPanel(sec, q, i, marked) + '</div>';
+    html += '</div>' + creditHtml() + '</div>';
+
+    html += '<footer class="bottombar"><div class="in pad">' +
+      '<button class="btn" id="prev" ' + (i === 0 ? 'disabled' : '') + '>Back</button>' +
+      '<button class="btn ' + (marked ? 'flagged' : '') + '" id="mark" aria-pressed="' + marked + '">' + (marked ? 'Marked<span class="long"> for review</span>' : 'Mark<span class="long"> for review</span>') + '</button>' +
+      '<button class="btn" id="rev">Review<span class="long"> (' + answered(sec) + '/' + qs.length + ')</span></button>' +
+      '<span class="spacer"></span>' +
+      (i < qs.length - 1 ? '<button class="btn primary" id="next">Next</button>' : '<button class="btn primary" id="fin">Finish<span class="long"> section</span></button>') +
+      '</div></footer>';
+
+    if (ui.review) html += reviewSheet(sec);
+    if (ui.confirm) html += confirmSheet(sec);
+    // keep the passage and page scroll where they were when only the answer changes
+    var oldP = document.getElementById('passage'), pTop = oldP ? oldP.scrollTop : 0, pKey = oldP ? oldP.getAttribute('data-p') : null, wy = window.scrollY;
+    app.innerHTML = html;
+    var newP = document.getElementById('passage');
+    if (newP && pKey === newP.getAttribute('data-p')) newP.scrollTop = pTop;
+    window.scrollTo(0, wy);
+    bindSection(sec);
+    if (sec === 'L') updateAudioUI();
+  }
+
+  function questionPanel(sec, q, i, marked) {
+    var h = '<section class="panel" aria-live="polite">';
+    if (sec === 'L') h += '<div class="part">' + partOf(q.n) + '</div>';
+    if (sec === 'S') h += '<div class="part">' + (q.t === 'st' ? 'Structure' : 'Written Expression') + '</div>';
+    if (sec === 'R') { var p = T.P[q.p]; h += '<div class="part">Questions ' + p.from + '–' + p.to + '</div>'; }
+    h += '<div class="qhead"><span class="qnum">' + q.n + '.</span>' + (marked ? '<span class="qflag">Marked for review</span>' : '') + '</div>';
+    var cur = st.ans[sec][i] || '';
+    if (sec === 'S' && q.t === 'we') {
+      h += '<p class="hint">Choose the underlined part that must be changed.</p>';
+      h += '<p class="we">' + weStem(q.s, cur) + '</p>';
+      h += '<div class="weopts">' + 'ABCD'.split('').map(function (L) {
+        return '<button class="opt" data-a="' + L + '" aria-pressed="' + (cur === L) + '"><span class="let">' + L + '</span></button>';
+      }).join('') + '</div>';
+    } else {
+      if (sec === 'L') h += '<p class="hint">Listen to the recording, then choose the best answer.</p>';
+      else h += '<p class="stem">' + stemHtml(q.s) + '</p>';
+      h += '<div class="opts">' + q.o.map(function (o, k) {
+        var L = 'ABCD'[k];
+        return '<button class="opt" data-a="' + L + '" aria-pressed="' + (cur === L) + '"><span class="let">' + L + '</span><span>' + esc(o) + '</span></button>';
+      }).join('') + '</div>';
+    }
+    return h + '</section>';
+  }
+
+  function stemHtml(s) { return esc(s).replace(/_____/g, '<span class="blank" aria-label="blank"></span>'); }
+
+  function weStem(s, cur) {
+    return esc(s).replace(/\[u\]([\s\S]*?)\[\/u:([A-D])\]/g, function (_, t, L) {
+      return '<button class="ul" data-a="' + L + '" aria-pressed="' + (cur === L) + '" aria-label="Option ' + L + ': ' + t + '"><span class="ult">' + t + '</span><span class="ull">' + L + '</span></button>';
+    });
+  }
+
+  function passagePanel(q) {
+    var p = T.P[q.p];
+    var hl = {};
+    var m = q.s.match(/\blines? (\d+)(?:\s*[-–]\s*(\d+))?/i);
+    if (m) { var a = +m[1], b = +(m[2] || m[1]); for (var k = a; k <= b; k++) hl[k] = true; }
+    var h = '<section class="panel passage" id="passage" data-p="' + q.p + '" aria-label="Reading passage"><h3>Questions ' + p.from + '–' + p.to + '</h3>';
+    p.lines.forEach(function (line, idx) {
+      var n = idx + 1;
+      var label = n === 1 ? 'Line' : (n % 5 === 0 ? '(' + n + ')' : '');
+      h += '<div class="pl' + (p.para.indexOf(idx) >= 0 ? ' para' : '') + (hl[n] ? ' hl' : '') + '"><span class="ln">' + label + '</span><span class="tx">' + esc(line) + '</span></div>';
+    });
+    return h + '</section>';
+  }
+
+  function reviewSheet(sec) {
+    var qs = list(sec);
+    var un = qs.length - answered(sec), fl = st.mark[sec].filter(Boolean).length;
+    return '<div class="overlay" id="ov"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="rv-h">' +
+      '<h2 id="rv-h">Review · ' + SEC[sec].short + '</h2>' +
+      '<p style="margin:0;color:var(--muted)">' + answered(sec) + ' answered · ' + un + ' unanswered · ' + fl + ' marked. Select a number to go to that question.</p>' +
+      '<div class="legend"><span class="l-ans">Answered</span><span>Unanswered</span><span class="l-flag">Marked</span></div>' +
+      '<div class="grid">' + qs.map(function (q, k) {
+        var c = 'cell' + (st.ans[sec][k] ? ' ans' : '') + (st.mark[sec][k] ? ' flag' : '') + (k === st.cur[sec] ? ' cur' : '');
+        return '<button class="' + c + '" data-go="' + k + '" aria-label="Question ' + q.n + '">' + q.n + '</button>';
+      }).join('') + '</div>' +
+      '<div class="row"><button class="btn" id="rv-close">Back to questions</button><button class="btn primary" id="rv-fin">Finish section</button></div>' +
+      '</div></div>';
+  }
+
+  function confirmSheet(sec) {
+    var un = list(sec).length - answered(sec);
+    var last = sec === 'R';
+    return '<div class="overlay" id="cf"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="cf-h" style="max-width:460px">' +
+      '<h2 id="cf-h">Finish ' + SEC[sec].short + '?</h2>' +
+      '<p>' + (un ? 'You have <b>' + un + ' unanswered</b> question' + (un > 1 ? 's' : '') + '. ' : 'All questions are answered. ') +
+      'You still have ' + fmt(remaining(sec)) + ' left. After you finish, you cannot return to this section.</p>' +
+      (sec === 'L' && !aud.ended && audioPosition() < (aud.duration || 1e9) ? '<p class="msg info">The recording is still playing. Finishing now stops it.</p>' : '') +
+      '<div class="row"><button class="btn" id="cf-no">Keep working</button><button class="btn primary" id="cf-yes">' + (last ? 'Finish and submit test' : 'Finish section') + '</button></div>' +
+      '</div></div>';
+  }
+
+  function bindSection(sec) {
+    var qs = list(sec);
+    function go(k) { st.cur[sec] = Math.max(0, Math.min(qs.length - 1, k)); save(); ui.review = false; render(); window.scrollTo(0, 0); }
+    app.querySelectorAll('[data-a]').forEach(function (b) {
+      b.onclick = function () { st.ans[sec][st.cur[sec]] = b.getAttribute('data-a'); save(); render(); };
+    });
+    var el;
+    if ((el = document.getElementById('prev'))) el.onclick = function () { go(st.cur[sec] - 1); };
+    if ((el = document.getElementById('next'))) el.onclick = function () { go(st.cur[sec] + 1); };
+    if ((el = document.getElementById('fin'))) el.onclick = function () { ui.confirm = true; render(); };
+    document.getElementById('mark').onclick = function () { st.mark[sec][st.cur[sec]] = !st.mark[sec][st.cur[sec]]; save(); render(); };
+    document.getElementById('rev').onclick = function () { ui.review = true; render(); };
+    if (ui.review) {
+      app.querySelectorAll('[data-go]').forEach(function (b) { b.onclick = function () { go(+b.getAttribute('data-go')); }; });
+      document.getElementById('rv-close').onclick = function () { ui.review = false; render(); };
+      document.getElementById('rv-fin').onclick = function () { ui.review = false; ui.confirm = true; render(); };
+      document.getElementById('ov').onclick = function (e) { if (e.target.id === 'ov') { ui.review = false; render(); } };
+    }
+    if (ui.confirm) {
+      document.getElementById('cf-no').onclick = function () { ui.confirm = false; render(); };
+      document.getElementById('cf-yes').onclick = function () { ui.confirm = false; finishSection(sec); };
+    }
+    if (sec === 'L') bindAudio();
+  }
+
+  function finishSection(sec) {
+    st.done[sec] = true;
+    if (sec === 'L') { try { aud.pause(); } catch (e) {} }
+    var next = ORDER[ORDER.indexOf(sec) + 1];
+    ui.review = false; ui.confirm = false;
+    if (next) { st.stage = 'intro-' + next; save(); render(); window.scrollTo(0, 0); }
+    else submit();
+  }
+
+  // ---------- listening audio ----------
+  function audioPosition() { return st.start.L ? (Date.now() - st.start.L) / 1000 : 0; }
+  function audioFinished() { return aud.ended || (aud.duration && audioPosition() >= aud.duration); }
+
+  function startAudio() {
+    var pos = audioPosition();
+    function play() {
+      if (aud.duration && pos >= aud.duration) { updateAudioUI(); return; }
+      try { aud.currentTime = pos; } catch (e) {}
+      var p = aud.play();
+      if (p && p.catch) p.catch(function () { ui.audioBlocked = true; updateAudioUI(); });
+      ui.audioBlocked = false;
+    }
+    if (aud.readyState >= 1) play(); else { aud.addEventListener('loadedmetadata', play, { once: true }); aud.load(); }
+  }
+
+  function audioPanel() {
+    return '<section class="panel audio" id="apanel">' +
+      '<div class="wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>' +
+      '<div class="astatus" id="astatus">Loading recording…</div>' +
+      '<div class="abar" aria-hidden="true"><span id="abar"></span></div>' +
+      '<button class="btn primary" id="aresume" hidden>Continue recording</button>' +
+      '</section>';
+  }
+
+  function updateAudioUI() {
+    var s = document.getElementById('astatus'), bar = document.getElementById('abar'), btn = document.getElementById('aresume'), pnl = document.getElementById('apanel');
+    if (!s) return;
+    var playing = !aud.paused && !aud.ended;
+    pnl.classList.toggle('playing', playing);
+    if (bar && aud.duration) bar.style.width = Math.min(100, audioPosition() / aud.duration * 100) + '%';
+    if (audioFinished()) {
+      s.innerHTML = 'Recording finished<small>Check your answers before the time runs out.</small>'; btn.hidden = true;
+    } else if (playing) {
+      s.innerHTML = 'Recording is playing<small>It cannot be paused or replayed.</small>'; btn.hidden = true;
+    } else {
+      s.innerHTML = 'Recording stopped<small>Press the button to continue from where it should be now.</small>'; btn.hidden = false;
+    }
+  }
+
+  function bindAudio() {
+    var btn = document.getElementById('aresume');
+    if (btn) btn.onclick = function () { startAudio(); };
+  }
+
+  ['play', 'pause', 'ended', 'timeupdate', 'loadedmetadata'].forEach(function (ev) { aud.addEventListener(ev, updateAudioUI); });
+  aud.addEventListener('error', function () {
+    var s = document.getElementById('astatus');
+    if (s) s.innerHTML = 'The recording could not load<small>Tell your teacher. Then press Continue to try again.</small>';
+    var b = document.getElementById('aresume'); if (b) b.hidden = false;
+  });
+
+  // ---------- submit & result ----------
+  function submit() {
+    st.stage = 'submitting'; save(); ui.err = ''; render();
+    post({ action: 'submit', school: st.school, studentId: st.id, name: st.name, 'class': st.cls, answers: st.ans }).then(function (res) {
+      if (res.ok) { st.result = res; st.stage = 'result'; save(); return render(); }
+      if (res.error === 'already_submitted') { ui.err = 'This student ID has already submitted the test. Ask your teacher if you think this is a mistake.'; return render(); }
+      ui.err = res.message || 'Submitting failed. Press Try again.'; render();
+    }).catch(function () { ui.err = 'Cannot reach the test server. Check your internet connection, then press Try again. Your answers are saved on this device.'; render(); });
+  }
+
+  function renderSubmitting() {
+    app.innerHTML = '<div class="screen nobars pad"><div class="card">' +
+      '<div class="secmark">' + esc(CFG.title) + '</div>' +
+      (ui.err
+        ? '<h1>Your answers were not sent yet</h1><p class="msg err" role="alert">' + esc(ui.err) + '</p><button class="btn primary" id="retry" style="width:100%">Try again</button>'
+        : '<h1>Sending your answers…</h1><p class="lede">Please wait and keep this page open.</p>') +
+      '</div>' + creditHtml() + '</div>';
+    var r = document.getElementById('retry'); if (r) r.onclick = submit;
+  }
+
+  function renderResult() {
+    var r = st.result;
+    app.innerHTML = '<div class="screen nobars pad"><div class="card">' +
+      '<div class="secmark">' + esc(CFG.title) + ' · Result</div>' +
+      '<h1>' + esc(st.name) + '</h1>' +
+      '<p class="lede">' + esc(st.school || '') + ' · Student ID ' + esc(st.id) + (st.cls ? ' · Class ' + esc(st.cls) : '') + '</p>' +
+      '<div style="color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.08em;font-weight:600">Estimated TOEFL ITP score</div>' +
+      '<div class="big">' + r.total + '</div>' +
+      '<p style="margin:0 0 18px;color:var(--muted);font-size:13px">Maximum 677</p>' +
+      '<table class="sections"><thead><tr><th>Section</th><th class="num">Correct</th><th class="num">Score</th></tr></thead><tbody>' +
+      ORDER.map(function (k) { return '<tr><td>' + SEC[k].name + '</td><td class="num">' + r.correct[k] + ' / ' + SEC[k].total + '</td><td class="num">' + r.scaled[k] + '</td></tr>'; }).join('') +
+      '</tbody></table>' +
+      '<p class="msg info" style="margin:0">Your result has been sent to your teacher. You can close this page.</p>' +
+      '</div>' + creditHtml() + '</div>';
+  }
+
+  // ---------- timer ----------
+  setInterval(function () {
+    if (!st || ['L', 'S', 'R'].indexOf(st.stage) < 0) return;
+    var sec = st.stage, left = remaining(sec), t = document.getElementById('timer');
+    if (t) { t.textContent = fmt(left); t.classList.toggle('low', left < 5 * 60000); }
+    if (sec === 'L') updateAudioUI();
+    if (left <= 0) finishSection(sec);
+  }, 500);
+
+  // keyboard: A–D to answer, arrows to move
+  document.addEventListener('keydown', function (e) {
+    if (!st || ['L', 'S', 'R'].indexOf(st.stage) < 0 || ui.review || ui.confirm) return;
+    if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+    var k = e.key.toUpperCase(), sec = st.stage;
+    if ('ABCD'.indexOf(k) >= 0 && k.length === 1) { st.ans[sec][st.cur[sec]] = k; save(); render(); }
+    else if (e.key === 'ArrowRight' && st.cur[sec] < list(sec).length - 1) { st.cur[sec]++; save(); render(); }
+    else if (e.key === 'ArrowLeft' && st.cur[sec] > 0) { st.cur[sec]--; save(); render(); }
+  });
+
+  window.addEventListener('beforeunload', function (e) {
+    if (st && ['L', 'S', 'R', 'submitting'].indexOf(st.stage) >= 0 && !st.result) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  // ---------- boot: continue an unfinished test on this device ----------
+  var last = lastId();
+  if (last) {
+    var s = load(last[0], last[1]);
+    if (s && s.stage !== 'login' && testOf(s.school)) {
+      st = s; useTest(st.school);
+      if (st.stage === 'L' && !audioFinished()) ui.audioBlocked = true; // needs a tap to resume sound
+      if (st.stage === 'submitting') { render(); submit(); }
+      else render();
+    } else render();
+  } else render();
+})();
+</script>
+</body>
+</html>
